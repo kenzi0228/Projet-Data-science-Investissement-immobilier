@@ -1,11 +1,24 @@
-.ipynb_checkpoints/
+# Environnement virtuel
+.venv/
+venv/
 __pycache__/
+
+# Fichiers temporaires
 *.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Données brutes
 data/raw/
 data/clean/
 *.parquet
 *.csv
-*.zip
+
+# Fichiers système
 .DS_Store
-.vscode/
-.env
+Thumbs.db
