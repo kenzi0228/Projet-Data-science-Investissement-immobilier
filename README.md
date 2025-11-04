@@ -207,22 +207,10 @@ L’interface est organisée en six onglets. Tous les graphiques intègrent des 
 
 ---
 
-## 12. Git — commandes utiles
-
-Initialisation locale et push :
-
-```bash
-git init
-git remote add origin https://github.com/kenzi0228/Projet-Data-science-Investissement-immobilier.git
-git add .
-git commit -m "Ajout du dashboard et du notebook v2"
-git branch -M main
-git push -u origin main
-```
 
 ---
 
-## 14. Licence et auteur
+## 12. Licence et auteur
 
 - Licence : MIT (si applicable).  
 - Auteurs : Mohamed Kenzi Lali, Aina Ralijaona, Victor Lin (ECE Paris, ING4). Projet académique Data Science.
