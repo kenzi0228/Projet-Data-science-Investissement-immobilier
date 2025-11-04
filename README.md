@@ -43,23 +43,30 @@ PERSONA = {
 Ce persona pilote les valeurs initiales de plusieurs filtres (surface, budget, objectif de rendement) et sert de base aux recommandations.
 
 ---
-
 ## 4. Données utilisées
 
-| Source | Description | Emplacement | Format |
-|---|---|---|---|
-| DVF (Demandes de Valeurs Foncières) | Transactions immobilières (prix, surface, commune, code postal, année…) | `data/raw/` puis `data/clean/` | CSV/Parquet |
-| Base loyers (INSEE/observatoires) | Loyer médian par commune/zone | `data/raw/` | CSV |
-| Référentiels géographiques | Codes postaux, libellés, rattachements départements/zones | `data/raw/` | CSV |
-
-Le script `data_cleaner_advanced.py` :
-- harmonise les colonnes et les types ;
-- calcule `prix_m2 = valeur_fonciere / surface_reelle_bati` ;
-- calcule `rendement_net` à partir d’un loyer/m² paramétrable et de charges en % ;
-- élimine les valeurs aberrantes (IQR et/ou quantiles) ;
-- écrit une table unifiée dans `data/clean/`.
+| Source | Description | Emplacement | Format | Lien |
+|---|---|---|---|---|
+| Agglo_2024 (Aires d’attraction des villes - INSEE) | Classification des communes par agglomération / aire urbaine | `data/raw/` | XLSX | [Seule donnée qui sera incluse car le lien utilisé pour la récuperer ne fonctionne plus]() |
+| base_code_postaux | Base officielle des codes postaux et communes | `data/raw/` | CSV | [https://www.data.gouv.fr/datasets/base-officielle-des-codes-postaux/]() |
+| pred-app12-mef-dhup_2024 | Données de loyers observés (DHUP / MEF) | `data/raw/` | CSV | [https://static.data.gouv.fr/resources/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2024/20241205-153048/pred-app12-mef-dhup.csv ]() |
+| DVF_2025 | Transactions immobilières 2019–2024 (DGFiP / DVF+) | `data/raw/` | CSV / Parquet | [https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres/]() |
 
 ---
+
+### Script de nettoyage : `data_cleaner_advanced.py`
+
+Ce script est appelé lors de l'éxecution du dashboard, il:
+- harmonise les noms de colonnes et les types de données ;
+- calcule `prix_m2 = valeur_fonciere / surface_reelle_bati` ;
+- calcule le rendement :
+  - `rendement_brut = (loyer_annuel / valeur_fonciere) * 100`
+  - `rendement_net = (loyer_annuel * (1 - charges/100) / valeur_fonciere) * 100`
+- élimine les valeurs aberrantes (IQR et/ou quantiles 1%–99%) ;
+- écrit une table consolidée et propre dans `data/clean/`.
+
+---
+
 
 ## 5. Installation
 

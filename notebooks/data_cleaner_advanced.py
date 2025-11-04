@@ -1,15 +1,5 @@
 """
-data_cleaner_advanced.py
-========================
-Module de nettoyage AVANCÉ pour éliminer toutes les données aberrantes.
-Version améliorée avec détection intelligente des outliers.
-
-AMÉLIORATIONS:
-- ✅ Détection multi-critères des aberrations
-- ✅ Nettoyage du code département
-- ✅ Validation croisée prix/surface
-- ✅ Suppression des transactions impossibles
-- ✅ Enrichissement avec données calculées
+Module de nettoyage pour éliminer toutes les données aberrantes
 """
 
 import os
@@ -23,7 +13,7 @@ warnings.filterwarnings("ignore")
 
 
 class AdvancedDataCleaner:
-    """Nettoyeur avancé de données immobilières"""
+    """Nettoyeur de données immobilières"""
     
     def __init__(self, raw_dir, clean_dir):
         self.raw_dir = os.path.abspath(raw_dir)
@@ -76,7 +66,7 @@ class AdvancedDataCleaner:
         clean_fp = os.path.join(self.clean_dir, "dvf_clean_advanced.parquet")
         
         if os.path.exists(clean_fp) and not force_refresh:
-            print("✓ DVF avancé déjà nettoyé, chargement...")
+            print("DVF avancé déjà nettoyé, chargement...")
             return pd.read_parquet(clean_fp)
         
         # Recherche fichier DVF
@@ -85,13 +75,13 @@ class AdvancedDataCleaner:
         
         if not dvf_candidates:
             raise FileNotFoundError(
-                f"❌ Aucun fichier DVF trouvé dans {self.raw_dir}"
+                f"Aucun fichier DVF trouvé dans {self.raw_dir}"
             )
         
         dvf_path = dvf_candidates[0]
-        print(f"🔄 Nettoyage avancé DVF : {os.path.basename(dvf_path)}")
+        print(f"Nettoyage avancé DVF : {os.path.basename(dvf_path)}")
         
-        # === ÉTAPE 1 : CHARGEMENT BRUT ===
+        # ÉTAPE 1 : CHARGEMENT BRUT 
         usecols = [
             "Date mutation", "Nature mutation", "Valeur fonciere",
             "Code postal", "Commune", "Code departement", "Code commune",
@@ -101,9 +91,9 @@ class AdvancedDataCleaner:
         df = pd.read_csv(dvf_path, sep="|", dtype=str, low_memory=False)
         df = df[[c for c in usecols if c in df.columns]].copy()
         self.stats['initial'] = len(df)
-        print(f"   📊 Chargement initial : {self.stats['initial']:,}".replace(",", " "))
+        print(f"Chargement initial : {self.stats['initial']:,}".replace(",", " "))
         
-        # === ÉTAPE 2 : TYPAGE & FILTRES DE BASE ===
+        # ÉTAPE 2 : TYPAGE & FILTRES DE BASE 
         df["Valeur fonciere"] = self._to_numeric(df["Valeur fonciere"])
         df["Surface reelle bati"] = self._to_numeric(df["Surface reelle bati"])
         df["Nombre pieces principales"] = self._to_numeric(df["Nombre pieces principales"])
@@ -121,26 +111,26 @@ class AdvancedDataCleaner:
         df = df.dropna(subset=["Valeur fonciere", "Surface reelle bati", "Date mutation"])
         
         self.stats['after_basic'] = len(df)
-        print(f"   ✓ Après filtres de base : {self.stats['after_basic']:,}".replace(",", " "))
+        print(f"Après filtres de base : {self.stats['after_basic']:,}".replace(",", " "))
         
-        # === ÉTAPE 3 : NETTOYAGE ABERRATIONS ===
+        # ÉTAPE 3 : NETTOYAGE ABERRATIONS 
         
-        # 3.1 - Surface aberrante
+        # Surface aberrante
         df = df[
             (df["Surface reelle bati"] >= 9) &  # Min 9m² (studios)
             (df["Surface reelle bati"] <= 300)   # Max 300m² (maisons)
         ]
         
-        # 3.2 - Prix aberrants (bornes larges)
+        # Prix aberrants (bornes larges)
         df = df[
             (df["Valeur fonciere"] >= 10000) &   # Min 10k€
             (df["Valeur fonciere"] <= 2000000)   # Max 2M€
         ]
         
-        # 3.3 - Calcul prix/m²
+        # Calcul prix/m²
         df["prix_m2"] = df["Valeur fonciere"] / df["Surface reelle bati"]
         
-        # 3.4 - Prix/m² aberrants (bornes réalistes IDF)
+        # Prix/m² aberrants (bornes réalistes IDF)
         df = df[
             (df["prix_m2"] >= 1500) &   # Min 1500€/m² (grandes couronnes)
             (df["prix_m2"] <= 20000)    # Max 20000€/m² (Paris centre)
@@ -148,7 +138,7 @@ class AdvancedDataCleaner:
         
         print(f"   ✓ Après bornes réalistes : {len(df):,}".replace(",", " "))
         
-        # === ÉTAPE 4 : DÉTECTION OUTLIERS STATISTIQUE ===
+        # ÉTAPE 4 : DÉTECTION OUTLIERS STATISTIQUE 
         
         # Outliers par IQR (par département pour être plus précis)
         mask_valid = pd.Series(True, index=df.index)
@@ -162,20 +152,20 @@ class AdvancedDataCleaner:
                     df_dept, 
                     column='prix_m2', 
                     method='iqr', 
-                    factor=2.5  # Moins strict que 3.0
+                    factor=2.5  
                 )
                 mask_valid[mask_dept] = mask_outliers.values
         
         df = df[mask_valid]
         self.stats['after_outliers'] = len(df)
-        print(f"   ✓ Après suppression outliers IQR : {self.stats['after_outliers']:,}".replace(",", " "))
+        print(f"Après suppression outliers IQR : {self.stats['after_outliers']:,}".replace(",", " "))
         
-        # === ÉTAPE 5 : VALIDATION CROISÉE ===
+        # ÉTAPE 5 : VALIDATION CROISÉE 
         
-        # 5.1 - Ratio surface/prix cohérent (évite erreurs de saisie)
+        # Ratio surface/prix cohérent (évite erreurs de saisie)
         df["ratio_prix_surface"] = df["Valeur fonciere"] / df["Surface reelle bati"]
         
-        # 5.2 - Nombre de pièces cohérent avec surface
+        # Nombre de pièces cohérent avec surface
         if "Nombre pieces principales" in df.columns:
             # Studios: 9-30m², T2: 30-50m², T3: 50-75m², etc.
             df["pieces_estimees"] = (df["Surface reelle bati"] / 20).clip(upper=6).round(0)
@@ -187,7 +177,7 @@ class AdvancedDataCleaner:
             )
             df = df[mask_pieces]
         
-        # 5.3 - Appartements vs Maisons (validation type/surface)
+        # Appartements vs Maisons (validation type/surface)
         if "Type local" in df.columns:
             # Appartements rarement > 150m²
             mask_appt = (
@@ -206,12 +196,12 @@ class AdvancedDataCleaner:
         self.stats['after_validation'] = len(df)
         print(f"   ✓ Après validation croisée : {self.stats['after_validation']:,}".replace(",", " "))
         
-        # === ÉTAPE 6 : ENRICHISSEMENT ===
+        # ÉTAPE 6 : ENRICHISSEMENT 
         
-        # 6.1 - Année
+        # Année
         df["annee"] = df["Date mutation"].dt.year
         
-        # 6.2 - Standardisation noms colonnes
+        # Standardisation noms colonnes
         df = df.rename(columns={
             "Date mutation": "date_mutation",
             "Valeur fonciere": "valeur_fonciere",
@@ -232,7 +222,7 @@ class AdvancedDataCleaner:
             mask_missing & df["code_postal"].notna(), "code_postal"
         ].str[:2]
 
-        # 6.3 - Catégorie de bien (T1, T2, T3...)
+        # Catégorie de bien (T1, T2, T3...)
         bins_surface = [0, 30, 45, 65, 90, 300]
         labels_cat = ['Studio/T1', 'T2', 'T3', 'T4', 'T5+']
         df['categorie_bien'] = pd.cut(
@@ -242,7 +232,7 @@ class AdvancedDataCleaner:
             include_lowest=True
         )
         
-        # 6.4 - Zone géographique (Paris intra-muros vs petite/grande couronne)
+        # Zone géographique (Paris intra-muros vs petite/grande couronne)
         df['zone_geo'] = df['code_departement'].map({
             '75': 'Paris',
             '92': 'Petite Couronne',
@@ -254,7 +244,7 @@ class AdvancedDataCleaner:
             '95': 'Grande Couronne'
         })
         
-        # 6.5 - Prix au m² par quartile (pour segmentation)
+        # Prix au m² par quartile (pour segmentation)
         df['quartile_prix'] = pd.qcut(
             df['prix_m2'], 
             q=4, 
@@ -267,12 +257,12 @@ class AdvancedDataCleaner:
         q1, q99 = df["prix_m2"].quantile([0.01, 0.99])
         df = df[(df["prix_m2"] >= q1) & (df["prix_m2"] <= q99)]
 
-        # === SAUVEGARDE ===
+        # SAUVEGARDE 
         df.to_parquet(clean_fp, index=False)
         
-        print(f"\n✅ Nettoyage terminé !")
-        print(f"   📉 Suppressions : {self.stats['initial'] - self.stats['final']:,} transactions ({((self.stats['initial'] - self.stats['final']) / self.stats['initial'] * 100):.1f}%)".replace(",", " "))
-        print(f"   📊 Dataset final : {self.stats['final']:,} transactions propres".replace(",", " "))
+        print(f"\nNettoyage terminé !")
+        print(f"Suppressions : {self.stats['initial'] - self.stats['final']:,} transactions ({((self.stats['initial'] - self.stats['final']) / self.stats['initial'] * 100):.1f}%)".replace(",", " "))
+        print(f"Dataset final : {self.stats['final']:,} transactions propres".replace(",", " "))
         
         return df
     
@@ -281,18 +271,18 @@ class AdvancedDataCleaner:
         clean_fp = os.path.join(self.clean_dir, "loyers_idf.parquet")
         
         if os.path.exists(clean_fp) and not force_refresh:
-            print("✓ Loyers déjà nettoyés")
+            print("Loyers déjà nettoyés")
             return pd.read_parquet(clean_fp)
         
         loyer_candidates = glob.glob(os.path.join(self.raw_dir, "*loyer*.csv")) + \
                           glob.glob(os.path.join(self.raw_dir, "pred-app*.csv"))
         
         if not loyer_candidates:
-            print("⚠️ Aucun fichier loyers trouvé")
+            print("Aucun fichier loyers trouvé")
             return None
         
         loyer_path = loyer_candidates[0]
-        print(f"🔄 Nettoyage loyers : {os.path.basename(loyer_path)}")
+        print(f"Nettoyage loyers : {os.path.basename(loyer_path)}")
         
         try:
             df = pd.read_csv(loyer_path, sep=None, engine="python", dtype=str, encoding="utf-8")
@@ -307,7 +297,7 @@ class AdvancedDataCleaner:
                 break
         
         if col_loy is None:
-            print("⚠️ Colonne loyer introuvable")
+            print("Colonne loyer introuvable")
             return None
         
         df['loyer_m2'] = (df[col_loy].astype(str)
@@ -340,7 +330,7 @@ class AdvancedDataCleaner:
                   .sort_values('loyer_m2', ascending=False))
         
         df_agg.to_parquet(clean_fp, index=False)
-        print(f"✓ Loyers : {len(df_agg):,} codes postaux".replace(",", " "))
+        print(f"Loyers : {len(df_agg):,} codes postaux".replace(",", " "))
         
         return df_agg
     
@@ -349,18 +339,18 @@ class AdvancedDataCleaner:
         clean_fp = os.path.join(self.clean_dir, "gares_idf.parquet")
         
         if os.path.exists(clean_fp) and not force_refresh:
-            print("✓ Gares déjà nettoyées")
+            print("Gares déjà nettoyées")
             return pd.read_parquet(clean_fp)
         
         gare_candidates = glob.glob(os.path.join(self.raw_dir, "*accessibilite*.csv")) + \
                          glob.glob(os.path.join(self.raw_dir, "*gare*.csv"))
         
         if not gare_candidates:
-            print("⚠️ Aucun fichier gares trouvé")
+            print("Aucun fichier gares trouvé")
             return None
         
         gare_path = gare_candidates[0]
-        print(f"🔄 Nettoyage gares : {os.path.basename(gare_path)}")
+        print(f"Nettoyage gares : {os.path.basename(gare_path)}")
         
         df = pd.read_csv(gare_path, sep=';', engine='python', dtype=str)
         
@@ -371,7 +361,7 @@ class AdvancedDataCleaner:
                 break
         
         if col_acc is None:
-            print("⚠️ Colonne accessibilité introuvable")
+            print("Colonne accessibilité introuvable")
             return None
         
         df[col_acc] = pd.to_numeric(df[col_acc], errors='coerce')
@@ -397,7 +387,7 @@ class AdvancedDataCleaner:
             df_agg = df[['niveau_accessibilite']].copy()
         
         df_agg.to_parquet(clean_fp, index=False)
-        print(f"✓ Gares : {len(df_agg):,} gares".replace(",", " "))
+        print(f"Gares : {len(df_agg):,} gares".replace(",", " "))
         
         return df_agg
     
@@ -408,14 +398,14 @@ class AdvancedDataCleaner:
         if df_loyers is not None and 'code_postal' in df_loyers.columns:
             dfu = dfu.merge(df_loyers, on='code_postal', how='left', suffixes=('', '_loyer'))
             n_with_loyer = dfu['loyer_m2'].notna().sum()
-            print(f"✓ Fusion loyers : {n_with_loyer:,} lignes enrichies".replace(",", " "))
+            print(f"Fusion loyers : {n_with_loyer:,} lignes enrichies".replace(",", " "))
         
         return dfu
     
     def clean_all(self, force_refresh=False):
         """Pipeline complet de nettoyage"""
         print("=" * 70)
-        print("🧹 NETTOYAGE AVANCÉ DES DONNÉES")
+        print("NETTOYAGE AVANCÉ DES DONNÉES")
         print("=" * 70 + "\n")
         
         df_dvf = self.clean_dvf(force_refresh=force_refresh)
@@ -423,14 +413,14 @@ class AdvancedDataCleaner:
         df_gares = self.clean_gares(force_refresh=force_refresh)
         
         print("\n" + "=" * 70)
-        print("🔗 FUSION DES DATASETS")
+        print("FUSION DES DATASETS")
         print("=" * 70)
         df_unifie = self.unify_all(df_dvf, df_loyers, df_gares)
         
-        print("\n✅ Pipeline terminé !")
-        print(f"   📊 Transactions finales : {len(df_unifie):,}".replace(",", " "))
-        print(f"   📍 Communes : {df_unifie['nom_commune'].nunique():,}".replace(",", " "))
-        print(f"   📅 Années : {df_unifie['annee'].min():.0f} - {df_unifie['annee'].max():.0f}")
+        print("\nPipeline terminé")
+        print(f"Transactions finales : {len(df_unifie):,}".replace(",", " "))
+        print(f"Communes : {df_unifie['nom_commune'].nunique():,}".replace(",", " "))
+        print(f"Années : {df_unifie['annee'].min():.0f} - {df_unifie['annee'].max():.0f}")
         
         return df_unifie, df_loyers, df_gares
 
