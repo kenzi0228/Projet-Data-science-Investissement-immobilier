@@ -43,14 +43,14 @@ PERSONA = {
 Ce persona pilote les valeurs initiales de plusieurs filtres (surface, budget, objectif de rendement) et sert de base aux recommandations.
 
 ---
-## 4. Données utilisées
+## 4. Données utilisées (faire attention juste a les renommé comme ci dessous)
 
 | Source | Description | Emplacement | Format | Lien |
 |---|---|---|---|---|
 | Agglo_2024 (Aires d’attraction des villes - INSEE) | Classification des communes par agglomération / aire urbaine | `data/raw/` | XLSX | [Seule donnée qui sera incluse car le lien utilisé pour la récuperer ne fonctionne plus]() |
-| base_code_postaux | Base officielle des codes postaux et communes | `data/raw/` | CSV | [https://www.data.gouv.fr/datasets/base-officielle-des-codes-postaux/]() |
+| base_code_postaux | Base officielle des codes postaux et communes | `data/raw/` | CSV | [https://www.data.gouv.fr/api/1/datasets/r/008a2dda-2c60-4b63-b910-998f6f818089]() |
 | pred-app12-mef-dhup_2024 | Données de loyers observés (DHUP / MEF) | `data/raw/` | CSV | [https://static.data.gouv.fr/resources/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2024/20241205-153048/pred-app12-mef-dhup.csv ]() |
-| DVF_2025 | Transactions immobilières 2019–2024 (DGFiP / DVF+) | `data/raw/` | CSV / Parquet | [https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres/]() |
+| DVF_2025 | Transactions immobilières 2025 (DGFiP / DVF+) | `data/raw/` | CSV / Parquet | [https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres/20251018-234902/valeursfoncieres-2025-s1.txt.zip]() |
 
 ---
 
